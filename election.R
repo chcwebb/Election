@@ -1,5 +1,6 @@
 #library useful for string filtering
 #install.packages("stringr")
+#install.packages("sqldf")
 library(stringr)
 
 
@@ -173,6 +174,11 @@ for (demographic_var in c("birth_year","birth_age","race_code","gender_code","et
 missing_registration <- voted_county_vs_county <- sqldf("select * from votes_with_reg_data where ethnic_code is null")
 
 
+misreg <- sqldf("select election_desc, count(*) from missing_registration group by election_desc")
+
+misregc <- sqldf("select election_desc,voted_county_desc, count(*) from missing_registration group by election_desc,voted_county_desc")
+
+
 
 #9119434 voted in 2008 in the alamance file but voted in guilford.  this number is not in the registration file for alamance, is it anywhere? probably guilford?
 #it is nowhere in the registration file, but voted in two elections!
@@ -199,4 +205,29 @@ for (cty in 1:100){
   results <- toString(nrow(tmp))
   print(paste("voter",reg,"has",results,"records in the",cty_str,"voter history file."))
 }
+
+#what about the ncid? BY480869 (9119434) was in alamance/guilford.  let's get everyone with ncid BY480869 in those counties (1,41) and see what we get.
+#test this for AA100704 which is in Guilford 34
+
+ncid="BY480869"
+for (cty in 1:100){
+  cty_str <- toString(cty)
+  tmp <- read.table(paste(data_directory,"ncvoter",cty_str,".txt",sep=""), 
+                    header = TRUE,stringsAsFactors=FALSE,
+                    sep = "\t")
+  tmp <- tmp[tmp$ncid == ncid,]
+  results <- toString(nrow(tmp))
+  print(paste("voter",ncid,"has",results,"records in the",cty_str,"registration file."))
+  
+  
+  tmp <- read.table(paste(data_directory,"ncvhis",cty_str,".txt",sep=""), 
+                    header = TRUE,stringsAsFactors=FALSE,
+                    sep = "\t")
+  tmp <- tmp[tmp$ncid == ncid,]
+  results <- toString(nrow(tmp))
+  print(paste("voter",ncid,"has",results,"records in the",cty_str,"voter history file."))
+}
+
+
+
 
