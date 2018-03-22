@@ -177,7 +177,10 @@ missing_registration <- voted_county_vs_county <- sqldf("select * from votes_wit
 #9119434 voted in 2008 in the alamance file but voted in guilford.  this number is not in the registration file for alamance, is it anywhere? probably guilford?
 #it is nowhere in the registration file, but voted in two elections!
 #let's try 9121406, who did onestop instead of in person
+#this person voted once
 
+#wait, AJ said that they get reassigned registration numbers when they move between counties; does that mean that their old registration is DELETED?
+#less than 1% of votes are invalidated this way, but according to the census 5-7% of Forsyth's population moved from another county/state each year...similar nationally...
 
 reg=9121406
 for (cty in 1:100){
