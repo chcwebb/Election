@@ -28,39 +28,39 @@ county_data <- function(county){
   
   #a simple function that combines and filters the data files for a given county
   #for (county in c("34","41","36","26")){
-
-    
-    #get the voter history file for the county
-    vhis_c <- read.table(paste(data_directory,"ncvhis",county,".txt",sep=""), 
-                    header = TRUE,stringsAsFactors=FALSE,
-                   sep = "\t")
-    
-    #filter to only get general or certain larger municipal
-    vhis_c_small <- vhis_c[vhis_c$election_desc %in% elections, ]
-    
-    #only counties of interest
-    vhis_c_small <- vhis_c_small[(vhis_c_small$county_id %in% counties_of_interest)|(vhis_c_small$voted_county_id %in% counties_of_interest), ]
   
-    #merge to the voter registration file
-    #v_registration <- read.table(paste(data_directory,"ncvoter",county,".txt",sep=""), 
-    #                     header = TRUE,stringsAsFactors=FALSE,
-    #                     sep = "\t")
   
-    #the variables to pull from 
-    #regvars <- c("voter_reg_num","status_cd","voter_status_desc","reason_cd","voter_status_reason_desc","municipality_abbrv","municipality_desc", "birth_year","birth_age","race_code","gender_code","ethnic_code","state_cd","zip_code","mail_city")   
-    #votes_with_reg_data <- merge(vhis_c_small,v_registration[ , regvars], by="voter_reg_num",all.x=TRUE)
-    
-    #that was a left join, so now let's check the number of rows to make sure that none were gained (can't loose any)
-    #votes <- nrow(vhis_c_small)
-    #votes_after_merge <- nrow(votes_with_reg_data)
-    
-    #if (votes != votes_after_merge){
-    #  stop(paste("Problem with merge in",county,votes,"votes turned into",votes_after_merge,"records after merge"))
-    #       }
-    #print(paste("county",county," imported with",votes_after_merge,"records"))
-    #return(votes_with_reg_data)
-    return(vhis_c_small)
-  }
+  #get the voter history file for the county
+  vhis_c <- read.table(paste(data_directory,"ncvhis",county,".txt",sep=""), 
+                       header = TRUE,stringsAsFactors=FALSE,
+                       sep = "\t")
+  
+  #filter to only get general or certain larger municipal
+  vhis_c_small <- vhis_c[vhis_c$election_desc %in% elections, ]
+  
+  #only counties of interest
+  vhis_c_small <- vhis_c_small[(vhis_c_small$county_id %in% counties_of_interest)|(vhis_c_small$voted_county_id %in% counties_of_interest), ]
+  
+  #merge to the voter registration file
+  #v_registration <- read.table(paste(data_directory,"ncvoter",county,".txt",sep=""), 
+  #                     header = TRUE,stringsAsFactors=FALSE,
+  #                     sep = "\t")
+  
+  #the variables to pull from 
+  #regvars <- c("voter_reg_num","status_cd","voter_status_desc","reason_cd","voter_status_reason_desc","municipality_abbrv","municipality_desc", "birth_year","birth_age","race_code","gender_code","ethnic_code","state_cd","zip_code","mail_city")   
+  #votes_with_reg_data <- merge(vhis_c_small,v_registration[ , regvars], by="voter_reg_num",all.x=TRUE)
+  
+  #that was a left join, so now let's check the number of rows to make sure that none were gained (can't loose any)
+  votes <- nrow(vhis_c_small)
+  #votes_after_merge <- nrow(votes_with_reg_data)
+  
+  #if (votes != votes_after_merge){
+  #  stop(paste("Problem with merge in",county,votes,"votes turned into",votes_after_merge,"records after merge"))
+  #       }
+  print(paste("county",county," imported with",votes,"records"))
+  #return(votes_with_reg_data)
+  return(vhis_c_small)
+}
 
 
 #voter history
@@ -81,8 +81,8 @@ reg_ids <- unique(election_data$voter_reg_num)
 
 #first county 1
 tmp <- read.table(paste(data_directory,"ncvoter","1",".txt",sep=""), 
-                     header = TRUE,stringsAsFactors=FALSE,
-                     sep = "\t")
+                  header = TRUE,stringsAsFactors=FALSE,
+                  sep = "\t")
 registration_data <- tmp[tmp$voter_reg_num %in% reg_ids, ]
 
 #now the other 99
@@ -93,17 +93,57 @@ for (cty in 2:100){
                     sep = "\t")
   tmp_small <- tmp[tmp$voter_reg_num %in% reg_ids, ]
   registration_data <- rbind(registration_data,tmp_small)
+  print(paste(cty_str,toString(nrow(tmp)),toString(nrow(tmp_small))))
 }
-  
 
+
+regvars <- c("voter_reg_num","status_cd","voter_status_desc","reason_cd","voter_status_reason_desc","municipality_abbrv","municipality_desc", "birth_year","birth_age","race_code","gender_code","ethnic_code","state_cd","zip_code","mail_city")   
 
 #merge the registration and voter history files
-regvars <- c("voter_reg_num","status_cd","voter_status_desc","reason_cd","voter_status_reason_desc","municipality_abbrv","municipality_desc", "birth_year","birth_age","race_code","gender_code","ethnic_code","state_cd","zip_code","mail_city")   
-votes_with_reg_data <- merge(election_data,registration_data[ , regvars], by="voter_reg_num",all.x=TRUE)
+#I'm breaking this up by election because merging both files together takes forever
+
+#empty list.  There has to be a better way to do this...
+all_elections <- vector("list", 10)
+
+election=elections[1]
+print(election)
+tmp <-  election_data[election_data$election_desc == election]
+votes_with_reg_data <- merge(tmp,registration_data[ , regvars], by="voter_reg_num",all.x=TRUE)
+
+
+for (election_num in 2:10){
+  election=elections[election_num]
+  print(election)
+  tmp <-  election_data[election_data$election_desc == election]
+  tmp_with_reg_data <- merge(tmp,registration_data[ , regvars], by="voter_reg_num",all.x=TRUE)
+  votes_with_reg_data <- rbind(votes_with_reg_data,tmp_with_reg_data)
+}
+
+
 
 
 #this takes a long time to do, so save the output file for later
+#ideally I should have broken this down into multiple merges and ensured that the voter_reg_num was a number
 saveRDS(votes_with_reg_data, file='voter_data.rds')
+
+
+
+#votes_with_reg_data <- readRDS('voter_data.rds')
+
+
+
+
+
+
+#make sure no duplicate ids increased the number of rows
+votes <- nrow(election_data)
+votes_after_merge <- nrow(votes_with_reg_data)
+
+if (votes != votes_after_merge){
+  print(paste("Problem with merge in",county,votes,"votes turned into",votes_after_merge,"records after merge"))
+}
+
+
 
 
 #let's look at the voter numbers in each election
@@ -131,3 +171,27 @@ for (demographic_var in c("birth_year","birth_age","race_code","gender_code","et
 
 #there were 5089 records which didn't seem to have matches in the registration files which I will now look at
 missing_registration <- voted_county_vs_county <- sqldf("select * from votes_with_reg_data where ethnic_code is null")
+
+
+
+#9119434 voted in 2008 in the alamance file but voted in guilford.  this number is not in the registration file for alamance, is it anywhere? probably guilford?
+
+
+reg=9119434
+for (cty in 1:100){
+  cty_str <- toString(cty)
+  tmp <- read.table(paste(data_directory,"ncvoter",cty_str,".txt",sep=""), 
+                    header = TRUE,stringsAsFactors=FALSE,
+                    sep = "\t")
+  tmp <- tmp[tmp$voter_reg_num == reg,]
+  results <- toString(nrow(tmp))
+  print(paste("voter",reg,"has",results,"records in the",cty_str,"registration file."))
+
+  tmp <- read.table(paste(data_directory,"ncvhis",cty_str,".txt",sep=""), 
+                    header = TRUE,stringsAsFactors=FALSE,
+                    sep = "\t")
+  tmp <- tmp[tmp$voter_reg_num == reg,]
+  results <- toString(nrow(tmp))
+  print(paste("voter",reg,"has",results,"records in the",cty_str,"voter history file."))
+}
+
