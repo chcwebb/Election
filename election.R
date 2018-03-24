@@ -1,5 +1,7 @@
-#library useful for string filtering
+#library useful for string filtering; not actually used here
 #install.packages("stringr")
+
+#for sql code
 #install.packages("sqldf")
 library(stringr)
 
@@ -8,8 +10,8 @@ library(stringr)
 library(sqldf)
 
 #the file you store the raw data in.  NOT THE SAME AS THIS PROJECT OR THE PUMS DATA WILL BE BACKED UP ON GITHUB
-#data_directory <- "C:/Users/staff/Downloads/ncvoter/"
-data_directory <- "C:/Users/Zantan/Downloads/ncvoter/"
+data_directory <- "C:/Users/staff/Downloads/ncvoter/"
+#data_directory <- "C:/Users/Zantan/Downloads/ncvoter/"
 
 #county codes are found in the data format page on the FTP
 #Forsyth 34
@@ -171,8 +173,15 @@ for (demographic_var in c("birth_year","birth_age","race_code","gender_code","et
 
 
 #there were 5089 records which didn't seem to have matches in the registration files which I will now look at
-missing_registration <- voted_county_vs_county <- sqldf("select * from votes_with_reg_data where ethnic_code is null")
+missing_registration <- sqldf("select * from votes_with_reg_data where ethnic_code is null")
 
+#just the 2016 election; after all, we only really want demographic data for that one
+#there are only 70 missing from 2016, which is pretty insignificant
+missing_registration_2016 <- missing_registration[missing_registration$election_desc=="11/08/2016 GENERAL",]
+
+#is this all the cases where the voted county does not match the county?
+#yes, we still get 5089
+voted_county_mismatch <- sqldf("select * from votes_with_reg_data where voted_county_id != county_id")
 
 misreg <- sqldf("select election_desc, count(*) from missing_registration group by election_desc")
 
@@ -188,13 +197,19 @@ misregc <- sqldf("select election_desc,voted_county_desc, count(*) from missing_
 #wait, AJ said that they get reassigned registration numbers when they move between counties; does that mean that their old registration is DELETED?
 #less than 1% of votes are invalidated this way, but according to the census 5-7% of Forsyth's population moved from another county/state each year...similar nationally...
 
-reg=9121406
+#actually 210641 has records in 29 26 and 2, with registrations in 29 and 26.  The registrations in 29 and 26 have completely different names!
+
+#put any registration number here and it will identify any instances of it in any county file
+#this takes a long time because
+reg=210641 
 for (cty in 1:100){
   cty_str <- toString(cty)
   tmp <- read.table(paste(data_directory,"ncvoter",cty_str,".txt",sep=""), 
                     header = TRUE,stringsAsFactors=FALSE,
                     sep = "\t")
   tmp <- tmp[tmp$voter_reg_num == reg,]
+  if (nrow(tmp)>=1){
+  print(tmp$voter_reg_num)}
   results <- toString(nrow(tmp))
   print(paste("voter",reg,"has",results,"records in the",cty_str,"registration file."))
 
@@ -202,6 +217,8 @@ for (cty in 1:100){
                     header = TRUE,stringsAsFactors=FALSE,
                     sep = "\t")
   tmp <- tmp[tmp$voter_reg_num == reg,]
+  if (nrow(tmp)>=1){
+    print(tmp$voter_reg_num)}
   results <- toString(nrow(tmp))
   print(paste("voter",reg,"has",results,"records in the",cty_str,"voter history file."))
 }
